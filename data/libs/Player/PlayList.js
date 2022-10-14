@@ -8,7 +8,7 @@ const exec = util.promisify(require('child_process').exec);
 const ytdl = require('ytdl-core');
 const ytpl = require('ytpl');
 const ytsearch = require('yt-search');
-const {Client, Message, Interaction, MessageEmbed } = require("discord.js");
+const {Client, Interaction, EmbedBuilder } = require("discord.js");
 const ffmpegdir=process.platform=="win32"?require("path").resolve(__dirname,"../../ffmpeg/bin/")+"\\":"";
 
 async function findbestaudio(data={},type=1){
@@ -81,7 +81,7 @@ function parseti(str='0'){
  * @param {string} request
  * @param {{duration:number}} data 
  * @param {number} n 
- * @returns 
+ * @returns {Track} 
  */
 async function getdata(request,data={},n=0){
     if(!request) return;if(n>5) return;
@@ -141,7 +141,7 @@ class PlayList extends EventEmitter{
         this.playlist=[];
         /**
          * @name PlayList#queue
-         * @type {{request:string,message:Message}[]}
+         * @type {{request:string,interaction:Interaction}[]}
          * @readonly
          */
         this.queue=[]
@@ -158,6 +158,11 @@ class PlayList extends EventEmitter{
          * @readonly
          */
         this.repeat=0;
+        /**
+         * @name PlayList#last_id 
+         * @type {number}
+         */
+        this.last_id=0;
     }
     /**
      * data
@@ -165,22 +170,11 @@ class PlayList extends EventEmitter{
     async _process(){
         while(this.queue.length){try{
             let item=this.queue.shift();
-            if(item.request=="!LOCAL!"){
-                for(let file of item.message.attachments){
-                    if(i[1].contentType?.startsWith("audio")||[1].contentType?.startsWith("video")){
-                        let res = await getdata(item.request).catch(()=>{});
-                        if(res){
-                            this.playlist.push(res);
-                            this.emit("newTrack",item.message);
-                        }
-                    }
-                }
-            }
-            else if(ytpl.validateID(item.request)){
-                let playlist=await ytpl(item.request).catch(()=>{})
+            if(ytpl.validateID(item.request)){
+                let playlist=await ytpl(item.request).catch(()=>{});
                 if(playlist){
-                    let embed=new MessageEmbed().setColor(14441063).setTitle('Добавлен плэйлист:')
-                    .addField('Название:',`[${playlist?.title}](${playlist?.url})`,false)
+                    let embed=new EmbedBuilder().setColor(14441063).setTitle('Добавлен плэйлист:')
+                    .addFields({name:'Название:',value:`[${playlist?.title}](${playlist?.url})`,inline:false})
                     .addFields({name:'Автор:',value:`[${playlist?.author?.name}](${playlist?.author?.url})`,inline:true},
                     {name:'Просмотров',value:playlist?.views?.toString(),inline:true},
                     {name:'Последнее изменение',value:playlist?.lastUpdated?.toString().substring(16),inline:true})
@@ -188,19 +182,26 @@ class PlayList extends EventEmitter{
                     for(let track of playlist.items){
                         let res = await getdata(track.shortUrl,{duration:track.durationSec}).catch((err)=>{console.log(err)});
                         if(res?.url){
+                            res.id = this.last_id++;
                             this.playlist.push(res);
-                            this.emit("newTrack",item.message);
+                            this.emit("newTrack",item.interaction);
                         }
                     }
-                    item.message.reply({embeds:[embed]}).catch(async(err)=>{console.log(err)});
+                    item.interaction.editReply({embeds:[embed]})?.catch(async(err)=>{console.log(err)});
                 }
             }else if(0){
                 
             }else{
-                let res = await getdata(item.request).catch(()=>{});
+                /**
+                 * @type {Track}
+                 */
+                var res = await getdata(item.request).catch(()=>{});
                 if(res){
+                    res.id = this.last_id++;
                     this.playlist.push(res)
-                    this.emit("newTrack",item.message);
+                    console.log(res.getEmbed())
+                    item.interaction.editReply({embeds:[res.getEmbed()]})?.catch(async(err)=>{console.log(err)});
+                    this.emit("newTrack",item.interaction);
                 }
                 
             }
@@ -211,10 +212,10 @@ class PlayList extends EventEmitter{
     /**
      * Add track to the playlist
      * @param {string} request 
-     * @param {Message} message
+     * @param {Interaction} interaction
      */
-    add(request,message){
-        this.queue.push({request:request,message:message})
+    add(request,interaction){
+        this.queue.push({request:request,interaction:interaction})
         if(this.work) return;
         this.work=true;
         this._process();

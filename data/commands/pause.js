@@ -1,42 +1,28 @@
 const DiscordClient = require("../libs/client");
-const {Message,Interaction} = require("discord.js");
+const {CommandInteraction,AutocompleteInteraction,ChannelType} = require("discord.js");
 const DiscordPlayer = require("../libs/Player/DiscordPlayer");
 module.exports = {
     name:"pause",
     help:{
-        description:"",
-        options:[
-            {
-                name:""
-            },
-        ],
+        description:"Останавливает воспроизведение",
+        options:[],
     },
     enable:true,
-    aliases:["pau"],
+    aliases:[],
     permissions:["musicplayer"],
     /**
      * 
      * @param {DiscordClient} client 
-     * @param {Message} message 
-     * @param {string[]} args 
+     * @param {CommandInteraction} interaction 
      * @param {*} param3 
      */
-    command:async (client, message, args, settings, {}={})=>{
-        // return message.reply("Player offline!!!");
-        var Player;
-        if(message.guild.me.voice.channel&&client.connections.getconnection(message.guildId))
-            Player = client.connections.getconnection(message.guildId);
-        if(!Player) return message.react('❗').catch(()=>null);
+     command:async (client, interaction, settings, {}={})=>{
+        // return interaction.reply("Player offline!!!");
+        var Player,connection=client.connections.getconnection(interaction.guildId);
+        if(connection.connected&&connection.connection)
+            Player = connection.connection;
+        if(!Player) return interaction.reply({content:'❗',ephemeral:true}).catch(()=>null);
         Player.pause();
+        interaction.reply({content:`Остановленно.`,ephemeral:true}).catch(()=>null);
     },
-    /**
-     * 
-     * @param {DiscordClient} client 
-     * @param {Interaction} interaction 
-     * @param {string[]} args 
-     * @param {*} param3 
-     */
-    slashcommand:async (client, interaction, args, settings, {}={})=>{
-        
-    }
 }

@@ -1,5 +1,5 @@
 const DiscordClient = require("../libs/client");
-const {Message,Interaction} = require("discord.js");
+const {CommandInteraction,AutocompleteInteraction,ChannelType} = require("discord.js");
 const DiscordPlayer = require("../libs/Player/DiscordPlayer");
 module.exports = {
     name:"userinfo",
@@ -12,26 +12,15 @@ module.exports = {
         ],
     },
     aliases:[],
-    enable:true,
+    enable:false,
     permissions:[],
     /**
      * 
      * @param {DiscordClient} client 
-     * @param {Message} message 
-     * @param {string[]} args 
+     * @param {CommandInteraction} interaction 
      * @param {*} param3 
      */
-    command:async (client, message, args, settings, {}={})=>{
+    command:async (client, interaction, settings, {}={})=>{
         
     },
-    /**
-     * 
-     * @param {DiscordClient} client 
-     * @param {Interaction} interaction 
-     * @param {string[]} args 
-     * @param {*} param3 
-     */
-    slashcommand:async (client, interaction, args, settings, {}={})=>{
-        
-    }
 }

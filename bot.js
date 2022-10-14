@@ -1,70 +1,51 @@
-const {Client,Intents, Options, Message,MessageEmbed, Interaction} = require('discord.js');
+const {Client,GatewayIntentBits, Options, Message, Interaction, Partials, InteractionType} = require('discord.js');
 const { createAudioPlayer, createAudioResource, joinVoiceChannel, NoSubscriberBehavior,getVoiceConnection,StreamType,demuxProbe } = require('@discordjs/voice');
 const fs = require('fs');
 const {exec,fork,spawn} = require('child_process');
-const myIntents = new Intents();
-const {token,prefix} = require('./config.json');
-const DiscordClient = require("./data/libs/client")
-myIntents.add(
-    Intents.FLAGS.GUILD_MEMBERS,
-    Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
-    Intents.FLAGS.GUILDS,
-    Intents.FLAGS.GUILD_PRESENCES,
-    Intents.FLAGS.GUILD_MESSAGES,
-    Intents.FLAGS.GUILD_VOICE_STATES,
-    Intents.FLAGS.DIRECT_MESSAGES
+const {token,prefix,applicationid} = require('./config.json');
+const DiscordClient = require('./data/libs/client');
+const client = new DiscordClient(
+        [
+            GatewayIntentBits.GuildMembers,
+            GatewayIntentBits.GuildMessageReactions,
+            GatewayIntentBits.Guilds,
+            GatewayIntentBits.GuildPresences,
+            GatewayIntentBits.GuildMessages,
+            GatewayIntentBits.DirectMessages,
+            GatewayIntentBits.GuildVoiceStates
+        ],[
+            Partials.Channel,
+            Partials.Message,
+            Partials.User
+        ],
+        token, applicationid
     );
-const client = new DiscordClient(myIntents);
-
-client.bot.on("messageCreate",async(message)=>{try{
-    if(message.author.bot) return
-    var args = message.content.split(' ');
-    var command = client.Auto(args.shift().toLowerCase());
-    if(!command.startsWith(prefix)&&!command.startsWith(`<@${client.bot.user.id}>`)) return;
-    command=(command.startsWith(`<@${client.bot.user.id}>`)?client.Auto(args.shift().toLowerCase()):command.slice(prefix.length))
-    args=args.filter(Boolean);
-    if(client.commands[command]?.command){
-        if(!message.guild.me.permissions.has("ADMINISTRATOR"))
-            message.reply("Внимание нет прав админестратора!\nБот может работать некорректно!!!").catch(()=>{})
-        await client.commands[command].command(client,message,args)
+const programms=[
+    async(interaction)=>null,async(interaction)=>null,
+    /**
+     * 
+     * @param {Interaction} interaction 
+     */
+    async(interaction)=>{
+        client.commands[interaction.commandName].command(client,interaction)?.catch(async(e)=>console.error(e));
     }
-}catch(e){client.error(`${"=".repeat(process.stdout.columns)}
-Ошибка в команде: "${command?command:"не известно"}"
-Название ошибки: ${e.name}\n${"-".repeat(process.stdout.columns)}
-Тип ошибки: ${e.message}\n${"-".repeat(process.stdout.columns)}
-Сообщение ошибки: ${e.stack}
-${"=".repeat(process.stdout.columns)}`);try{await message.react("❗")}catch{}}})
-
+]
 client.bot.on("interactionCreate",async(interaction)=>{
-    if(interaction.isCommand()){
-        
-    }else if(interaction.isMessageComponent()||interaction.isModalSubmit()){try{
-        var args = interaction.customId.split(":");
-        var module = args.shift();
-        if(client.modules[module]?.module){
-            await client.modules[module].module(client,interaction,args);
-        }
-}catch(e){client.error(`${"=".repeat(process.stdout.columns)}
-Ошибка в модуле: "${module?module:"не известно"}"
-Название ошибки: ${e.name}\n${"-".repeat(process.stdout.columns)}
-Тип ошибки: ${e.message}\n${"-".repeat(process.stdout.columns)}
-Сообщение ошибки: ${e.stack}
-${"=".repeat(process.stdout.columns)}`);try{await interaction.reply({content:"error",ephemeral:true})}catch{}}}
+    if(interaction.type==InteractionType.ApplicationCommandAutocomplete){
+        if(!client.commands[interaction.commandName]?.autocomplete) return;
+        client.commands[interaction.commandName].autocomplete(client,interaction)?.catch(async(e)=>console.error(e));
+    }if(interaction.type==InteractionType.ApplicationCommand){
+        if(!client.commands[interaction.commandName]?.command) return console.error(`Команда ${interaction.commandName} не найдена.`);
+        client.commands[interaction.commandName].command(client,interaction)
+        ?.catch(async(e)=>console.error(`${"=".repeat(process.stdout.columns)}
+        Ошибка в команде: "${interaction.commandName}"
+        Название ошибки: ${e.name}\n${"-".repeat(process.stdout.columns)}
+        Тип ошибки: ${e.message}\n${"-".repeat(process.stdout.columns)}
+        Сообщение ошибки: ${e.stack}
+        ${"=".repeat(process.stdout.columns)}`.replace("    ","")));
+    }if(interaction.type==InteractionType.Ping) return;
+
 })
-
-function stopprocess(signal) {
-    client.log(`Обнаружен сигнал выключения: "${signal}"`);
-    process.exit(0);
-}
-
-process.on("SIGHUP",(signal)=>{stopprocess(signal)})
-process.on("SIGINT",(signal)=>{stopprocess(signal)})
-process.on("SIGQUIT",(signal)=>{stopprocess(signal)})
-process.on("SIGUSR1",(signal)=>{stopprocess(signal)})
-process.on("SIGUSR2",(signal)=>{stopprocess(signal)})
-process.on("SIGTERM",(signal)=>{stopprocess(signal)})
-process.on("SIGHUP",(signal)=>{stopprocess(signal)})
-
 client.bot.once("ready",async()=>{
     console.log(`${client.bot.user.username} online`);
     client.bot.user.setPresence({ activities: [{ name: 'разработку' }]});
@@ -72,4 +53,4 @@ client.bot.once("ready",async()=>{
   });
 
 client.log("Подключение к серверам")
-client.bot.login(token)
+client.bot.login(token);

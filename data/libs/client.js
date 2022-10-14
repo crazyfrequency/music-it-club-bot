@@ -1,10 +1,9 @@
-const {Client,Intents} = require('discord.js');
+const {Client,GatewayIntentBits,Partials, SlashCommandBuilder, REST, Routes} = require('discord.js');
 const {replacer} = require('../../config.json');
 const DiscordPlayer = require('./Player/DiscordPlayer.js');
 const DiscordConnections = require('./DiscordConnections.js');
 const path = require("path");
 const fs = require("fs");
-const reload = require('require-reload')(require);
 /**
  * 
  * @param {console.log} log 
@@ -17,7 +16,7 @@ function LoadCommands(log,err,dir=undefined) {
     let files = fs.readdirSync(dir);
     var commands={};
     for(let file of files){
-        let command = require(dir + "\\" + file);
+        let command = require(dir + "/" + file);
         if(command.enable)
         if(!command.name || !command.help || !command.command){err(`Ошибка загрузки команды: ${file}`)}
         else{
@@ -42,7 +41,7 @@ function LoadModules(log,err,dir=undefined) {
     let files = fs.readdirSync(dir);
     var modules={};
     for(let file of files){
-        let module = require(dir + "\\" + file);
+        let module = require(dir + "/" + file);
         if(module.enable)
         if(!module.module){err(`Ошибка загрузки модуля: ${file}`)}
         else{
@@ -53,17 +52,76 @@ function LoadModules(log,err,dir=undefined) {
     log("Модули успешно загружены");
     return modules
 }
+function upploadCommands(log,err,token,applicationid,dir=undefined){
+    if(!dir) dir = path.join(__dirname, "..", "commands");
+    let files = fs.readdirSync(dir);
+    var commands=[];
+    for(let file of files){
+        let command = require(dir + "/" + file);
+        if(command.enable)
+        if(!command.name || !command.help || !command.command){err(`Ошибка загрузки команды на сервер: ${file}`)}
+        else{
+            let slashcommand = new SlashCommandBuilder().setName(command.name)
+            .setDescription(command.help.description)
+            for(let i of command.help.options){
+                if(i.type=="string")slashcommand.addStringOption(option=>{option.setName(i.name)
+                    .setDescription(i.description?i.description:"").setRequired(i.required?i.required:false)
+                    .setAutocomplete(i.autocomplete?true:false);
+                    if(i.choices)for(let j of i.choices)
+                        option.addChoices({name:j,value:j});
+                    if(i.min)option.setMinLength(i.min);if(i.max)option.setMaxLength(i.max);
+                    return option;
+                });
+                if(i.type=="number")slashcommand.addNumberOption(option=>{option.setName(i.name)
+                    .setDescription(i.description?i.description:"").setRequired(i.required?i.required:false)
+                    .setAutocomplete(i.autocomplete?true:false);
+                    if(i.min)option.setMinValue(i.min);if(i.max)option.setMaxValue(i.max);
+                    return option;
+                });
+                if(i.type=="channel")slashcommand.addChannelOption(option=>{
+                    option.setName(i.name).setDescription(i.description?i.description:"").setRequired(i.required?i.required:false)
+                    for(let j of i.channeltypes)option.addChannelTypes(j);return option;
+                });
+            }
+            commands.push(slashcommand.toJSON());
+            log(`Команда "${command.name}" подготовлена`);
+        }
+    }
+    log("Команды подготовлены к загрузке на сервер");
+    const rest = new REST({ version: '10' }).setToken(token);
+    console.log(commands);
+    (async () => {
+        try {
+            console.log(`Started refreshing ${commands.length} application (/) commands.`);
+    
+            const data = await rest.put(
+                Routes.applicationCommands(applicationid),
+                { body: commands },
+            );
+    
+            console.log(`Successfully reloaded ${data.length} application (/) commands.`);
+        } catch (error) {
+            console.error(error);
+        }
+    })();
+    log("Команды успешно загружены на сервер");
+    return commands
+}
 
 class DiscordClient{
     /**
      * 
-     * @param {Intents} intents 
+     * @param {GatewayIntentBits} intents 
+     * @param {Partials} partial 
+     * @param {String} token 
      */
-    constructor(intents){
+     constructor(intents=undefined,partial=undefined,token=undefined,applicationid=undefined){
         this.log = console.log;
         this.error = console.error;
         this.log("Запуск бота...");
-        this.bot = new Client({ intents: intents, partials: ["CHANNEL"] });
+        this.bot = new Client({ intents: intents, partials: partial });
+        this.log("Загрузка команд на сервер:");
+        upploadCommands(this.log,this.error,token,applicationid);
         this.connections = new DiscordConnections();
         this.log("Загрузка команд:");
         let com = LoadCommands(this.log,this.error);
@@ -80,7 +138,7 @@ class DiscordClient{
     async loadcommand(file=undefined,dir=undefined){
         if(!file) return;
         if(!dir) dir = path.join(__dirname, "..", "commands");
-        let command = reload(dir + "\\" + file);
+        let command = require(dir + "/" + file);
         if(!command.name || !command.help || !command.command){this.error(`Ошибка загрузки команды: ${file}`);}
         this.commands[command.name] = command;
         if(command.aliases)
@@ -90,74 +148,8 @@ class DiscordClient{
     async loadmodule(file=undefined,dir=undefined){
         if(!file) return;
         if(!dir) dir = path.join(__dirname, "..", "modules");
-        let command = reload(dir + "\\" + file);
+        let command = require(dir + "/" + file);
 
-    }
-    /**
-     * 
-     * @param {string} name 
-     * @returns 
-     */
-    async reloadcommand(name=undefined){
-        if(!name) return;
-        if(this.commands[name]){
-            if(this.commands[name].aliases)
-            for(let i of this.commands[name].aliases) delete this.commands[i];
-            delete this.commands[this.commands[name].name]
-        }else return "Нет такой команды!"
-        let dir = path.join(__dirname, "..", "commands"),file=name;
-        let command = reload(dir + "\\" + file);
-        if(!command.name || !command.help || !command.command){this.error(`Ошибка загрузки команды: ${file}`);}
-        this.commands[command.name] = command;
-        if(command.aliases)
-        for(let i of command.aliases) this.commands[i] = command;
-        return `Команда "${command.name}" успешно перезагружена`
-    }
-    /**
-     * 
-     * @param {string} name 
-     * @returns 
-     */
-     async reloadmodule(name=undefined){
-        if(!name) return;
-        if(this.modules[name]){
-            delete this.modules[this.modules[name].name]
-        }else return "Нет такого модуля!"
-        let dir = path.join(__dirname, "..", "modules"),file=name;
-        let module = reload(dir + "\\" + file);
-        if(!module.name || !module.module){this.error(`Ошибка загрузки модуля: ${file}`);}
-        this.modules[module.name] = module;
-        return `Модуль "${module.name}" успешно перезагружен`
-    }
-    /**
-     * 
-     * @param {string} name 
-     * @returns 
-     */
-    async deletecommand(name=undefined){
-        if(!name) return;
-        if(this.commands[name]){
-            if(this.commands[name].aliases)
-            for(let i of this.commands[name].aliases) delete this.commands[i];
-            delete this.commands[this.commands[name].name]
-            return "Удалено"
-        }else{
-            return "Нет такой команды!"
-        }
-    }
-    /**
-     * 
-     * @param {string} name 
-     * @returns 
-     */
-     async deletemodule(name=undefined){
-        if(!name) return;
-        if(this.modules[name]){
-            delete this.commands[this.modules[name].name]
-            return "Удалено"
-        }else{
-            return "Нет такого модуля!"
-        }
     }
     /**
      * String to lower case and to eng keys
@@ -197,6 +189,13 @@ class DiscordClient{
             t=t*60+Number(str.slice(0))
             return t
         }
+    };
+    parseduration(time){
+        time=Number(time);
+        if(!time) return time;
+        let hours = Math.floor(time / 3600);time = time - hours * 3600;
+        let minutes = Math.floor(time / 60),seconds = time - minutes * 60;
+        return `${hours?hours+":":""}${minutes>9?minutes:"0"+minutes}:${seconds>9?seconds:"0"+seconds}`
     };
 }
 

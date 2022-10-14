@@ -1,64 +1,56 @@
 const DiscordClient = require("../libs/client");
-const {Message,Interaction} = require("discord.js");
+const {CommandInteraction,AutocompleteInteraction,ChannelType} = require("discord.js");
 const DiscordPlayer = require("../libs/Player/DiscordPlayer");
 module.exports = {
     name:"skip",
     help:{
-        description:"",
+        description:"Пропустить трек",
         options:[
             {
-                name:""
+                name:"track",
+                type:"string",
+                description:"Пропутить трек в очереди(0 - текущий)",
+                autocomplete:true
             },
         ],
     },
     enable:true,
-    aliases:["s"],
+    aliases:[],
     permissions:["musicplayer"],
     /**
      * 
      * @param {DiscordClient} client 
-     * @param {Message} message 
+     * @param {CommandInteraction} interaction 
      * @param {string[]} args 
      * @param {*} param3 
      */
-    command:async (client, message, args, settings={musicplayer:"all"}, {}={})=>{
-        if(settings?.musicplayer=="all"||settings?.musicplayer==message.member.roles){
-            var Player;
-            if(message.guild.me.voice.channel)
-                Player = client.connections.getconnection(message.guildId)
-            else{
-                message.react('❗').catch(()=>null);return;
-            }
-            let res=Player.skip(args[0]);
-            if(res&&res!="ok") message.reply(`Удалён ${res.title}`).catch(()=>null);
-            message.react("✅").catch(()=>null);
-        }else{
-            var Player;
-            if(message.guild.me.voice.channel)
-                Player = client.connections.getconnection(message.guildId)
-            else{
-                message.react('❗').catch(()=>null);return;
-            }
-            if(!message.member.voice?.channel)
-            return message.reply("Вы не в голосовом канале");
-            if(message.member.voice.channel.members.size>2){
-                return message.reply("да да");
-            }
-            let res=Player.skip(args[0]);
-            if(res&&res!="ok") message.reply(`Удалён ${res.title}`).catch(()=>null);
-            message.react("✅").catch(()=>null);
-            // message.reply().catch(()=>null);
+    command:async (client, interaction, args, settings={musicplayer:"all"}, {}={})=>{
+        let value = Number(interaction.options.get("track")?.value);
+        var Player,connection=client.connections.getconnection(interaction.guildId);
+        if(connection.connected&&connection.connection)
+            Player = connection.connection;
+        if(!Player) return interaction.reply({content:'❗',ephemeral:true}).catch(()=>null);
+        if(value){
+            let res = Player.skip_id(value);
+            if(res=="bad") return interaction.reply({content:'❗',ephemeral:true}).catch(()=>null);
+            return interaction.reply({content:`Пропущен: ${res.title} - ${res.author}`,ephemeral:true}).catch(()=>null);
         }
+        let res = Player.skip();
+        return interaction.reply({content:`Пропущен: ${res.title} - ${res.author}`,ephemeral:true}).catch(()=>null);
         
     },
     /**
      * 
      * @param {DiscordClient} client 
-     * @param {Interaction} interaction 
-     * @param {string[]} args 
+     * @param {AutocompleteInteraction} interaction 
      * @param {*} param3 
      */
-    slashcommand:async (client, interaction, args, settings, {}={})=>{
-        
+    autocomplete:async (client, interaction, settings, {}={})=>{
+        let focusedValue = interaction.options.getFocused(),
+        connection = client.connections.getconnection(interaction.guildId).connection,
+        tracks=[connection.track].concat(connection.playlist.playlist);
+        await interaction.respond(
+            tracks.map((value,index)=>({name:`${index}: `+value.title,value:value.id.toString()}))
+        )
     }
 }

@@ -1,13 +1,22 @@
 const DiscordClient = require("../libs/client");
-const {Message,Interaction} = require("discord.js");
+const {CommandInteraction,AutocompleteInteraction,ChannelType} = require("discord.js");
 const DiscordPlayer = require("../libs/Player/DiscordPlayer");
 module.exports = {
     name:"bass",
     help:{
-        description:"",
+        description:"Режим басса",
         options:[
             {
-                name:""
+                name:"enable",
+                type:"string",
+                description:"Включение/выключение басса",
+                choices:["on","off"]
+            },
+            {
+                name:"db",
+                type:"number",
+                description:"Сила басса в db(0 без изменений, -10 на 10db тише)",
+                min:-100,max:100
             },
         ],
     },
@@ -17,35 +26,23 @@ module.exports = {
     /**
      * 
      * @param {DiscordClient} client 
-     * @param {Message} message 
-     * @param {string[]} args 
+     * @param {CommandInteraction} interaction 
      * @param {*} param3 
      */
-    command:async (client, message, args, settings, {}={})=>{
-        // message.reply("Player offline!!!")
-        var Player,bass=Number(client.Auto(args[0]).replace(",",".")
-        .replace("ю",".").replace("б","."));
-        if(message.guild.me.voice.channel)
-            Player = client.connections.getconnection(message.guildId)
+    command:async (client, interaction, settings, {}={})=>{
+        // interaction.reply("Player offline!!!")
+        let status = client.connections.getconnection(interaction.guildId);
+        var Player,bass_enable=interaction.options.get("enable"),
+        bass_value=interaction.options.get("db");
+        if(status.connected&&status.connection)
+            Player = client.connections.getconnection(interaction.guildId).connection;
         else{
-            return message.react('❗').catch(()=>null);
+            return interaction.reply({content:'❗',ephemeral:true}).catch(()=>null);
         }
-        if(args[0]=="on")
-            Player.options.setFilter("bass",10,Player.ffmpeg)
-        else if(args[0]=="off")
-            Player.options.setFilter("bass",0,Player.ffmpeg)
-        else
-            Player.options.setFilter("bass",bass,Player.ffmpeg);
-        
+        if(bass_enable)Player.options.bassboost=(bass_enable.value=="on");
+        if(bass_value)Player.options.bassboostdegree=bass_value.value;
+        interaction.reply({
+            content:`Басс ${Player.options.bassboost?"включен":"выключен"}, значение установленно как ${Player.options.bassboostdegree}`,
+            ephemeral:true}).catch(()=>null);
     },
-    /**
-     * 
-     * @param {DiscordClient} client 
-     * @param {Interaction} interaction 
-     * @param {string[]} args 
-     * @param {*} param3 
-     */
-    slashcommand:async (client, interaction, args, settings, {}={})=>{
-        
-    }
 }

@@ -1,6 +1,6 @@
 const {PlayList} = require("./PlayList");
 const fs = require("fs")
-const {MessageEmbed,VoiceChannel,Message,Guild, MessageActionRow, MessageButton, MessageSelectMenu} = require('discord.js');
+const {MessageEmbed, VoiceChannel, Guild, MessageActionRow, MessageButton, MessageSelectMenu, CommandInteraction} = require('discord.js');
 const {spawn, ChildProcess} = require('child_process');
 const {createAudioPlayer, createAudioResource, joinVoiceChannel, NoSubscriberBehavior, AudioResource, VoiceConnection, AudioPlayer} = require('@discordjs/voice');
 const { Track } = require("./Track"), ChatPlayer = require("./ChatPlayer");
@@ -149,7 +149,6 @@ class DiscordPlayer{
             if(p!=0)this.playbackDuration=p;
             if(n.status!="idle"){
                 this.status=(n.status!="autopaused")?n.status:"paused";
-                this.chatplayer.editnewplayer(this).catch(()=>null);
                 return;
             }try{this.ffmpeg.kill()}catch{}
             if(this.skiper===false&&this.moveposition===-1&&n.status==='idle'){
@@ -175,7 +174,6 @@ class DiscordPlayer{
                         this.playlist.once("newTrack",async()=>{
                             return this._play(this.playlist.get());
                         });
-                        this.chatplayer.editnewplayer(this).catch(()=>null);
                         return;
                     }else
                     if(nowtrack.url) return this._play(nowtrack);
@@ -204,13 +202,11 @@ class DiscordPlayer{
     /**
      * 
      * @param {string} request 
-     * @param {Message} message 
+     * @param {CommandInteraction} interaction 
      */
-    async play(request,message){
-        this.playlist.add(request,message);
-        if(message.react)
-            message.react("✅").catch(()=>null);
-        else{message.deferReply().catch(()=>null)}
+    async play(request,interaction){
+        this.playlist.add(request,interaction);
+        interaction.deferReply().catch(()=>null)
         // setTimeout(async()=>{
         //     let mess=this.visual_player.message,player=this.visual_player.player;
         //     if(mess) mess.delete().catch(()=>null)
@@ -219,7 +215,6 @@ class DiscordPlayer{
         //     if(m) this.visual_player.message = await message.channel.send({embeds:[embed]}).catch(()=>null)
         //     else this.visual_player.message = await message.channel.send({embeds:[embed]}).catch(()=>null)
         // },1000)
-        this.chatplayer.setchannel(message.channel);
     }
     async resume(){
         this.player.unpause();
@@ -245,11 +240,24 @@ class DiscordPlayer{
         position=Number(position);
         count=Number(count)?Number(count):1;
         if(!position){
+            let res = this.track;
             this.skiper=true;
             this.player.stop(true);
-            return "ok";
+            return res;
         }else{
             return this.playlist.delete(position-1,count)[0];
+        }
+    }
+    skip_id(id=undefined){
+        if(this.track.id==id){
+            let res = this.track;
+            this.skiper=true;
+            this.player.stop(true);
+            return res;
+        }else{
+            let index = this.playlist.playlist.findIndex(value=>{if(value.id==id) return true;});
+            if(index==-1)return "bad";
+            return this.playlist.delete(index,1)[0];
         }
     }
     /**
@@ -282,15 +290,13 @@ class DiscordPlayer{
         //     console.log(data);this.playbackDuration=this.resource.playbackDuration;
         // });
         this.ffmpeg.on("exit",async(code,signal)=>{console.log(code,signal)});
-        setTimeout(() => {
-            this.chatplayer.editnewplayer(this).catch((e)=>console.log(e));
-        }, 1000);
     }catch(e){console.error(e);}}
     async disconnect(){
         this.playlist=new PlayList();
         this.player.stop();
         try{this.ffmpeg.kill()}catch{};
-        return this.connection.disconnect();
+        let ret = this.connection.disconnect();
+        this.connection.destroy();return ret;
     }
     /**
      * 
@@ -303,6 +309,7 @@ class DiscordPlayer{
                 selfDeaf:true,
             })
         else this.connection.rejoin()
+        return this;
     }
 }
 

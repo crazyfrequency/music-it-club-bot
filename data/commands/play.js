@@ -1,52 +1,45 @@
 const DiscordClient = require("../libs/client");
-const {Message,Interaction} = require("discord.js");
+const {CommandInteraction,AutocompleteInteraction,ChannelType} = require("discord.js");
 const DiscordPlayer = require("../libs/Player/DiscordPlayer");
 module.exports = {
     name:"play",
     help:{
-        description:"",
+        description:"Проигрывает/добавляет в плейлист песню",
         options:[
             {
-                name:""
+                name:"url",
+                type:"string",
+                description:"Ссылка на песню",
+                required:true
             },
         ],
     },
     enable:true,
-    aliases:["p"],
+    aliases:[],
     permissions:["musicplayer"],
     /**
      * 
      * @param {DiscordClient} client 
-     * @param {Message} message 
-     * @param {string[]} args 
+     * @param {CommandInteraction} interaction 
      * @param {*} param3 
      */
-    command:async (client, message, args, settings, {}={})=>{
-        // return message.reply("Player offline!!!");
+    command:async (client, interaction, settings, {}={})=>{
+        let status = client.connections.getconnection(interaction.guildId);
         var Player;
-        if(message.guild.me.voice.channel&&client.connections.getconnection(message.guildId))
-            Player = client.connections.getconnection(message.guildId);
-        else if(message.member.voice.channel){
-            Player = client.connections.add(message.member.voice.channel);
-            message.reply(`Подключился к "<#${message.member.voice.channelId}>"`).catch(()=>null);
-        }else{
-            message.react('❗').catch(()=>null);message.reply('Подключитесь к каналу!').catch(()=>null);
-            return;
-        }if(!Player) return message.react('❗').catch(()=>null);
-        if(args.length)
-            Player.play(args.join(" "),message);
-        else if(message.attachments.first()){
-            Player.play("!LOCAL!",message);
+        if(status.connected&&status.connection)
+            Player = client.connections.getconnection(interaction.guildId).connection;
+        else if(status.connection){
+            Player = await status.connection.moveto();
+        }else if(interaction.member.voice.channel){
+            Player = client.connections.add(interaction.member.voice.channel);
+            await interaction.reply(`Подключился к "<#${interaction.member.voice.channelId}>"`).catch(async(e)=>console.error(e));
+        }else return interaction.reply({content:'Подключитесь к каналу!',ephemeral:true}).catch(()=>null);
+        if(!Player) return interaction.reply({content:'❗',ephemeral:true}).catch(()=>null);
+        let url = interaction.options.get("url")
+        if(url)
+            Player.play(url.value,interaction);
+        else if(interaction?.attachments?.first()){
+            Player.play("!LOCAL!",interaction);
         }
-    },
-    /**
-     * 
-     * @param {DiscordClient} client 
-     * @param {Interaction} interaction 
-     * @param {string[]} args 
-     * @param {*} param3 
-     */
-    slashcommand:async (client, interaction, args, settings, {}={})=>{
-        
     }
 }

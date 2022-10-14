@@ -25,7 +25,7 @@ const equalizer_option_number={
 }
 module.exports = {
     name:"equalizer",
-    enable:true,
+    enable:false,
     permissions:["musicplayer"],
     /**
      * 

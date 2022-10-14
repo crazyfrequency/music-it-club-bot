@@ -1,13 +1,17 @@
 const DiscordClient = require("../libs/client");
-const {Message,Interaction} = require("discord.js");
+const {CommandInteraction,AutocompleteInteraction,ChannelType} = require("discord.js");
 const DiscordPlayer = require("../libs/Player/DiscordPlayer");
 module.exports = {
     name:"move",
     help:{
-        description:"",
+        description:"Перемешение по треку на заданную минуту/секунду",
         options:[
             {
-                name:""
+                name:"position",
+                type:"string",
+                description:"Позиция( 90 | 1:30 | 0:01:30 )",
+                required:true,
+                autocomplete:true
             },
         ],
     },
@@ -17,26 +21,40 @@ module.exports = {
     /**
      * 
      * @param {DiscordClient} client 
-     * @param {Message} message 
-     * @param {string[]} args 
+     * @param {CommandInteraction} interaction 
      * @param {*} param3 
      */
-    command:async (client, message, args, settings, {}={})=>{
-        // return message.reply("Player offline!!!");
-        var Player;
-        if(message.guild.me.voice.channel&&client.connections.getconnection(message.guildId))
-            Player = client.connections.getconnection(message.guildId);
-        if(!Player) return message.react('❗').catch(()=>null);
-        Player.move(args[0]);
+    command:async (client, interaction, settings, {}={})=>{
+        // return interaction.reply("Player offline!!!");
+        let status = client.connections.getconnection(interaction.guildId);
+        var Player, position = interaction.options.get("position").value;
+        if(status.connected&&status.connection)
+            Player = client.connections.getconnection(interaction.guildId).connection;
+        if(!Player) return interaction.reply({content:'❗',ephemeral:true}).catch(()=>null);
+        if(/[ 0-9:]{1,}/.test(position)){
+            let val = interaction.options.get("position").value;
+            Player.move(val).catch(()=>null);
+            return interaction.reply({content:`Перемещено на позицию: ${client.parseduration(val)}`,ephemeral:true}).catch(()=>null);
+        }
+        if(!Player.track.chapters) return interaction.reply({content:'❗',ephemeral:true}).catch(()=>null);
+        let m = Player.track.chapters.find(item=>{if(item.title==position) return true;})
+        if(!m) return interaction.reply({content:'❗',ephemeral:true}).catch(()=>null);
+        Player.move(m.start_time);
+        interaction.reply({content:`Перемещено на позицию: ${client.parseduration(m.start_time)}`,ephemeral:true}).catch(()=>null);
     },
     /**
      * 
      * @param {DiscordClient} client 
-     * @param {Interaction} interaction 
-     * @param {string[]} args 
+     * @param {AutocompleteInteraction} interaction 
      * @param {*} param3 
      */
-    slashcommand:async (client, interaction, args, settings, {}={})=>{
-        
+    autocomplete:async (client, interaction, settings, {}={})=>{
+        let focusedValue = interaction.options.getFocused(),
+        chapters = client.connections.getconnection(interaction.guildId)?.connection?.track?.chapters;
+        if(!chapters) return;
+        await interaction.respond(
+            chapters.filter(value=>{if(value.title.toLowerCase().includes(focusedValue.toLowerCase()))return true;})
+            .map(value=>({ name: value.title, value: value.start_time.toString() }))
+        )
     }
 }

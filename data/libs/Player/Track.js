@@ -1,4 +1,5 @@
 const cookies = "APISID=KvpilY1TzuTWjjF8/AGebHuhBO0BlwqLMk; HSID=AXutkrbtmD-gnU3N_; LOGIN_INFO=AFmmF2swRQIhAPhNv-ZweZ79zRMWXhQAx-1H35E6B2ZNVLum7m7RklbJAiA2v1lS5RnpWslfVeDVFwa1awy-_np8iahP6ZRV8fTVvQ:QUQ3MjNmeGhBcjVwRFhrSkpFWFFHdVdJbFN0M1RXTVExN0FqNm9meVFhS3p4TUpVYW5Lc3U3QmVMX0ZXQ0JzWlg4U3lyLVF5Q2l5bFR4N0t5WFpuUk4zSWYycU1HNmpSX29jSWZDMHR4QS1zMExSbzd6a1diUGtFZDlBeWwxQk5LSGNMbWdiSDBvWk5aQUJYNUJmbF83M3hUMnJ5TU5SbmZ3; SAPISID=z_zjWozPs8OeKZOE/AmJ7jQTuZi_dM1Jwr; SID=GAgE0ryB5sb4p_e3iJi4mhleiM--qNJqXQcj6BKzzMYV3BTvltd_4u8j9i23NBl3-N0Oag.; SIDCC=AJi4QfHCOCBvCDmw9LbqowRss2FXadTYG5mNopaZU8cXORfrg9_n_7Im7dSQ_r-Y9QA078xn; SSID=ArWNCsnPFLLHspWhD; VISITOR_INFO1_LIVE=bQV13xq6F2c; YSC=3NB_UUJ-DE0";
+const {EmbedBuilder} = require("discord.js")
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 const ytdl = require('ytdl-core');
@@ -36,7 +37,7 @@ function parseduration(time){
 }
 
 class Track{
-    constructor(data){
+    constructor(data,id=0){
         /**
          * Title of this track
          * @name Track#title
@@ -58,7 +59,7 @@ class Track{
         /**
          * Url of author channel
          * @name Track#author_url
-         * @type {string}
+         * @type {string|undefined}
          */
         this.author_url=data.author_url?data.author_url:undefined
         /**
@@ -70,13 +71,13 @@ class Track{
         /**
          * Thumbnail of author
          * @name Track#author_thumbnail
-         * @type {string}
+         * @type {string|undefined}
          */
         this.author_thumbnail=data.author_thumbnail;
         /**
          * Upload date of this track
          * @name Track#uploadDate
-         * @type {string}
+         * @type {string|undefined}
          */
         this.uploadDate=data.uploadDate;
         /**
@@ -96,7 +97,7 @@ class Track{
          * @name Track#thumbnail
          * @type {string}
          */
-        this.thumbnail=data.thumbnail?data.thumbnail:"attachment://undefinded.png";
+        this.thumbnail=data.thumbnail?data.thumbnail:"https://cdn.discordapp.com/attachments/911499726644477992/975252886416146452/undefinded.png";
         /**
          * Duration of this track
          * @name Track#duration
@@ -113,6 +114,7 @@ class Track{
          * Likes count of this track
          */
         this.likes=data.likes;
+        this.id=id;
         var c;
         if(data.chapters){
             var c=[];
@@ -157,6 +159,20 @@ class Track{
     }
     getUrl(newdata=false){
         return this.url;
+    }
+    getEmbed(){
+        let embed = new EmbedBuilder().setColor(14441063).setTitle('Добавлен трек:')
+        .addFields(
+            {name:'Название',value:`[${this.title}](${this.video_url})`,inline:false},
+            {name:'Автор',value:this.author_url?`[${this.author}](${this.author_url})`:this.author,inline:true}
+        )
+        if(this.likes) embed.addFields({name:'Лайков',value:`${this.likes}`,inline:true})
+        if(this.views) embed.addFields({name:'Просмотров',value:`${this.views}`,inline:true})
+        embed.setAuthor({name:this.author+(this.verified?"✔":""),url:this.author_url,iconURL:this.author_thumbnail})
+        .setImage(this.thumbnail);
+        if(this.uploadDate)embed.setTimestamp(new Date(this.uploadDate));
+        console.log(this)
+        return embed;
     }
 }
 

@@ -1,21 +1,19 @@
 {
-  "name": "lolibot",
-  "version": "2.0.0",
-  "description": "bot for discord",
+  "name": "music-bot-it_club",
+  "version": "1.0.0",
+  "description": "discord music bot",
   "main": "bot.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "echo start from npm && node bot"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "dimon",
   "license": "ISC",
   "dependencies": {
-    "@discordjs/builders": "^0.12.0",
-    "@discordjs/opus": "^0.5.3",
-    "@discordjs/rest": "^0.3.0",
-    "@discordjs/voice": "^0.8.0",
-    "discord-api-types": "^0.30.0",
-    "discord.js": "^13.7.0",
+    "@discordjs/opus": "^0.8.0",
+    "@discordjs/rest": "^1.2.0",
+    "@discordjs/voice": "^0.11.0",
+    "discord-api-types": "^0.37.11",
+    "discord.js": "^14.5.0",
     "libsodium-wrappers": "^0.7.10",
     "require-reload": "^0.2.2",
     "yt-search": "^2.10.3",

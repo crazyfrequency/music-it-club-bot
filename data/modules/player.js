@@ -3,7 +3,7 @@ const {Message,Interaction,Modal, MessageActionRow, TextInputComponent} = requir
 const DiscordPlayer = require("../libs/Player/DiscordPlayer");
 module.exports = {
     name:"player",
-    enable:true,
+    enable:false,
     permissions:["musicplayer"],
     /**
      * 
