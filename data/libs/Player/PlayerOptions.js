@@ -182,16 +182,16 @@ class PlayerOptions{
             case "nightcore":this.nightcore=true;this.vaporwave=false;this.speed=1;return true;
             case "vaporwave":this.nightcore=false;this.vaporwave=true;this.speed=1;return true;
             case "8D":this._8D=true;return true;
-            case "bass":if(Number(param)==NaN)return;
-                this.bassboost=true;if(Number(param))this.bassboostdegree=Number(param);
+            case "bass":
+                if(this.bassboost)
                 for(let i in this.equalizer){
                     if(this.equalizer[i]!=0){
                         this.equalizer[i]=0;
                         try{ffmpeg.stdin.write(`^Cequalizer@h${i} -1 g 0\n`)}
                         catch{}
                     }
-                }this.bassboostdegree=Number(param);
-                try{ffmpeg.stdin.write(`^Cbass -1 g ${this.bassboostdegree}\n`)}
+                }
+                try{ffmpeg.stdin.write(`^Cbass -1 g ${this.bassboost?this.bassboostdegree:0}\n`)}
                 catch{}
                 try{ffmpeg.stdin.write(`^Cbass -1 f 110\n`)}
                 catch{}

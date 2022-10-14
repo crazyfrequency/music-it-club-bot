@@ -41,6 +41,7 @@ module.exports = {
         }
         if(bass_enable)Player.options.bassboost=(bass_enable.value=="on");
         if(bass_value)Player.options.bassboostdegree=bass_value.value;
+        if(bass_enable||bass_value)Player.options.setFilter("bass",undefined,Player.ffmpeg);
         interaction.reply({
             content:`Басс ${Player.options.bassboost?"включен":"выключен"}, значение установленно как ${Player.options.bassboostdegree}`,
             ephemeral:true}).catch(()=>null);
