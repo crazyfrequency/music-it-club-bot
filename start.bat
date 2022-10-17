@@ -1,1 +1,1 @@
-cmd /c "node bot"
+cmd /c "npm update && node bot"

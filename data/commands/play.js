@@ -25,7 +25,7 @@ module.exports = {
      */
     command:async (client, interaction, settings, {}={})=>{
         let status = client.connections.getconnection(interaction.guildId);
-        var Player;
+        var Player;console.log(interaction.member.voice)
         if(status.connected&&status.connection)
             Player = client.connections.getconnection(interaction.guildId).connection;
         else if(status.connection){

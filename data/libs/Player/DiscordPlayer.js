@@ -260,13 +260,17 @@ class DiscordPlayer{
             return this.playlist.delete(index,1)[0];
         }
     }
+    find_id=(id)=>{
+        if(this.track.id==id) return this.track;
+        return this.playlist.playlist.find((value)=>{if(value.id==id) return true});
+    }
     /**
      * 
      * @param {Track} track 
      * @param {number} time 
      */
-    _play(track,time=0){try{
-        let url=track.getUrl();
+    async _play(track,time=0){try{
+        let url=await track.getUrl();
         var args=['-reconnect',1,'-reconnect_streamed', 1, '-reconnect_delay_max', 5,'-err_detect','ignore_err','-vn','-sn','-user_agent',user_agent];
         if(url.endsWith(".m3u8")&&track.type=="ffprobe") args=args.concat(["-http_persistent","false"]);
         if(time>0){args=args.concat('-ss',time)};

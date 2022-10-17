@@ -40,7 +40,7 @@ module.exports = {
         let m = Player.track.chapters.find(item=>{if(item.title==position) return true;})
         if(!m) return interaction.reply({content:'❗',ephemeral:true}).catch(()=>null);
         Player.move(m.start_time);
-        interaction.reply({content:`Перемещено на позицию: ${client.parseduration(m.start_time)}`,ephemeral:true}).catch(()=>null);
+        interaction.reply({content:`Перемещено на позицию: ${m.start_time_name}`,ephemeral:true}).catch(()=>null);
     },
     /**
      * 
@@ -55,6 +55,6 @@ module.exports = {
         await interaction.respond(
             chapters.filter(value=>{if(value.title.toLowerCase().includes(focusedValue.toLowerCase()))return true;})
             .map(value=>({ name: value.title, value: value.start_time.toString() }))
-        )
+        ).catch(()=>null)
     }
 }

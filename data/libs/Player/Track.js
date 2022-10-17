@@ -3,6 +3,33 @@ const {EmbedBuilder} = require("discord.js")
 const util = require('util');
 const exec = util.promisify(require('child_process').exec);
 const ytdl = require('ytdl-core');
+var youtubeChapters = require('get-youtube-chapters');
+
+async function findbestaudio(data={},type=1){
+    if(type==2){
+        var a=[0,data[0]['url']]
+        const len=Object.keys(data).length
+        for(var i=0;i<len;i++){
+            if(data[i]['abr']!==null&&data[i]['abr']!==undefined){
+            if(a[0]<data[i]['abr']){a=[data[i]['abr'],data[i]['url']]}
+        }else if(data[i]['vcodec']=="none"){return data[len-1]['url']}}
+        return a[1]
+    }
+    if(data[0]){
+        var a=[0,data[0].url];
+        for(let i of data){
+            if(i.audioBitrate)if(i.audioBitrate>a[0]){
+                a[1]=i.url;
+                a[0]=i.audioBitrate;
+            }
+        }
+        if(a!=0)return a[1];
+    }
+    for(let i of data){
+        if(i.audioQuality=="AUDIO_QUALITY_MEDIUM") return i.url;
+    }
+    return data[data.length-2].url;
+  };
 
 function parseti(str='0'){
     str=str.toString()
@@ -65,7 +92,7 @@ class Track{
         /**
          * Verification of author
          * @name Track#verified
-         * @type {boolean}
+         * @type {number}
          */
         this.verified=data.verified;
         /**
@@ -112,12 +139,14 @@ class Track{
         this.views=data.views;
         /**
          * Likes count of this track
+         * @name Track#likes
+         * @type {number}
          */
         this.likes=data.likes;
         this.id=id;
-        var c;
+        var c=undefined;
         if(data.chapters){
-            var c=[];
+            c=[];
             for(let i of data.chapters){
                 c.push({
                     title:i.title,
@@ -125,7 +154,18 @@ class Track{
                     start_time:parseti(i.start_time)
                 })
             }
-        }else c=undefined;
+        }else{
+            let chapters = youtubeChapters(this.description)
+            c=[];
+            if(chapters)
+            for(let i of chapters){
+                c.push({
+                    title:i.title,
+                    start_time_name:parseduration(parseti(i.start)),
+                    start_time:parseti(i.start)
+                })
+            };
+        }
         /**
          * Chapters of this track
          * @name Track#chapters
@@ -157,8 +197,12 @@ class Track{
          */
         this.errors=0;
     }
-    getUrl(newdata=false){
-        return this.url;
+    async getUrl(newdata=false){
+        if(new Date()-this.shelf_life>21600000){
+            let res = await ytdl.getBasicInfo(request,{lang:"ru",requestOptions:{headers:{Cookies:cookies}}});
+            this.url = await findbestaudio(res.formats).catch(()=>{});
+        }
+            return this.url
     }
     getEmbed(){
         let embed = new EmbedBuilder().setColor(14441063).setTitle('Добавлен трек:')
@@ -168,12 +212,12 @@ class Track{
         )
         if(this.likes) embed.addFields({name:'Лайков',value:`${this.likes}`,inline:true})
         if(this.views) embed.addFields({name:'Просмотров',value:`${this.views}`,inline:true})
-        embed.setAuthor({name:this.author+(this.verified?"✔":""),url:this.author_url,iconURL:this.author_thumbnail})
+        embed.setAuthor({name:this.author+([""," ✔"," ♪"][this.verified]),url:this.author_url,iconURL:this.author_thumbnail})
         .setImage(this.thumbnail);
         if(this.uploadDate)embed.setTimestamp(new Date(this.uploadDate));
-        console.log(this)
         return embed;
     }
+    getFullEmbed = ()=>this.getEmbed().setFooter(this.description?{text:this.description}:null)
 }
 
 module.exports={Track}

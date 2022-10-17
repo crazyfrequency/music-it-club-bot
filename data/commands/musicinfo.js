@@ -2,19 +2,19 @@ const DiscordClient = require("../libs/client");
 const {CommandInteraction,AutocompleteInteraction,ChannelType} = require("discord.js");
 const DiscordPlayer = require("../libs/Player/DiscordPlayer");
 module.exports = {
-    name:"skip",
+    name:"musicinfo",
     help:{
-        description:"Пропустить трек",
+        description:"Отображает информацию о треках(без параметров отображает плейлист)",
         options:[
             {
                 name:"track",
                 type:"string",
-                description:"Пропутить трек в очереди(0 - текущий)",
+                description:"Подробная информация о треке",
                 autocomplete:true
             },
         ],
     },
-    enable:true,
+    enable:false,
     aliases:[],
     permissions:["musicplayer"],
     /**
@@ -30,13 +30,9 @@ module.exports = {
         if(connection.connected&&connection.connection)
             Player = connection.connection;
         if(!Player) return interaction.reply({content:'❗',ephemeral:true}).catch(()=>null);
-        if(value){
-            let res = Player.skip_id(value);
-            if(res=="bad") return interaction.reply({content:'❗',ephemeral:true}).catch(()=>null);
-            return interaction.reply({content:`Пропущен: ${res.title} - ${res.author}`,ephemeral:true}).catch(()=>null);
-        }
-        let res = Player.skip();
-        return interaction.reply({content:`Пропущен: ${res.title} - ${res.author}`,ephemeral:true}).catch(()=>null);
+        if(value)
+            return interaction.reply({content:"Трек:",embeds:[Player.find_id(value)?.getFullEmbed()],ephemeral:true});
+        return interaction.reply({embeds:[Player.playlist.getEmbed()],ephemeral:true}).catch(()=>null);
         
     },
     /**
@@ -49,9 +45,9 @@ module.exports = {
         let focusedValue = interaction.options.getFocused(),
         connection = client.connections.getconnection(interaction.guildId).connection,
         tracks=[connection.track].concat(connection.playlist.playlist);
-        console.log(tracks.length,tracks.filter(value=>value.title.includes(focusedValue)).length)
         await interaction.respond(
-            tracks.map((value,index)=>({name:`${index}: `+value.title,value:value.id.toString()})).filter(value=>value.name.toLowerCase().includes(focusedValue.toLowerCase())).slice(0,25)
+            tracks.map((value,index)=>({name:`${index}: `+value.title,value:value.id.toString()}))
+            .filter(value=>value.name.toLowerCase().includes(focusedValue.toLowerCase())).slice(0,25)
         ).catch(()=>null)
     }
 }

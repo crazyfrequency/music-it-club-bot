@@ -7,10 +7,11 @@ const EventEmitter = require('events');
 const exec = util.promisify(require('child_process').exec);
 const ytdl = require('ytdl-core');
 const ytpl = require('ytpl');
+const ytch = require('yt-channel-info');
 const ytsearch = require('yt-search');
 const {Client, Interaction, EmbedBuilder } = require("discord.js");
 const ffmpegdir=process.platform=="win32"?require("path").resolve(__dirname,"../../ffmpeg/bin/")+"\\":"";
-
+const wait = require('node:timers/promises').setTimeout;
 async function findbestaudio(data={},type=1){
     if(type==2){
         var a=[0,data[0]['url']]
@@ -90,7 +91,11 @@ async function getdata(request,data={},n=0){
         let res=await ytdl.getInfo(request,{lang:"ru",requestOptions:{headers:{Cookies:cookies}}});
         if(!res) return;
         result.video_url=res.videoDetails?.video_url;result.type="youtube";
-        result.verified=res.videoDetails?.author?.verified;
+        let channel = await ytch.getChannelInfo({
+            channelId: res.videoDetails?.author?.id,
+            httpsAgent: user_agent
+         }).catch(()=>null)
+        result.verified=channel?(channel.isVerified?1:channel.isOfficialArtist?2:0):res.videoDetails?.author?.verified?1:0;
         result.url=await findbestaudio(res.formats).catch(()=>{});
         result.duration=data.duration?data.duration:Number(res.videoDetails?.lengthSeconds);
         result.title=res.videoDetails?.title;result.author=res.videoDetails?.author?.name;
@@ -99,7 +104,8 @@ async function getdata(request,data={},n=0){
         result.thumbnail=best_thumbnail(res.videoDetails?.thumbnails);
         result.uploadDate=res.videoDetails?.uploadDate;
         result.views=Number(res.videoDetails?.viewCount);
-        result.chapters=res.videoDetails?.chapters
+        result.chapters=res.videoDetails?.chapters;
+        result.likes=Number(res.videoDetails?.likes);
         result.author_url=res.videoDetails?.author?.channel_url||res.videoDetails?.author?.user_url
     }else if(request.startsWith("https://")||request.startsWith("http://")){
         try{
@@ -170,15 +176,18 @@ class PlayList extends EventEmitter{
     async _process(){
         while(this.queue.length){try{
             let item=this.queue.shift();
-            if(ytpl.validateID(item.request)){
-                let playlist=await ytpl(item.request).catch(()=>{});
+            if(ytpl.validateID(item.request.replace("://music.youtube.com","://www.youtube.com"))){
+                let playlist=await ytpl(item.request.replace("://music.youtube.com","://www.youtube.com")).catch(()=>{});
                 if(playlist){
                     let embed=new EmbedBuilder().setColor(14441063).setTitle('Добавлен плэйлист:')
                     .addFields({name:'Название:',value:`[${playlist?.title}](${playlist?.url})`,inline:false})
-                    .addFields({name:'Автор:',value:`[${playlist?.author?.name}](${playlist?.author?.url})`,inline:true},
-                    {name:'Просмотров',value:playlist?.views?.toString(),inline:true},
-                    {name:'Последнее изменение',value:playlist?.lastUpdated?.toString().substring(16),inline:true})
+                    .addFields({name:'Автор:',value:`[${playlist?.author?.name||"Неизвестен"}](${playlist?.author?.url})`,inline:true},
+                    {name:'Просмотров',value:playlist?.views?.toString()||"Неизвестно",inline:true},
+                    {name:'Последнее изменение',value:playlist?.lastUpdated?.toString().substring(16)||playlist?.lastUpdated?.toString()||"Неизвестно",inline:true})
                     .setImage(playlist?.bestThumbnail?.url)
+                    if(playlist.items?.length>7) embed.setFooter({text:"Возможна долгая обработка треков!"})
+                    item.interaction.editReply({embeds:[embed]})?.catch(async(err)=>{console.log(err)});
+                    let i=0;
                     for(let track of playlist.items){
                         let res = await getdata(track.shortUrl,{duration:track.durationSec}).catch((err)=>{console.log(err)});
                         if(res?.url){
@@ -186,8 +195,8 @@ class PlayList extends EventEmitter{
                             this.playlist.push(res);
                             this.emit("newTrack",item.interaction);
                         }
+                        if(i>5) await wait(1000);
                     }
-                    item.interaction.editReply({embeds:[embed]})?.catch(async(err)=>{console.log(err)});
                 }
             }else if(0){
                 
@@ -237,6 +246,9 @@ class PlayList extends EventEmitter{
      */
     delete(positionstart,count=1){
         return this.playlist.splice(positionstart,count);
+    }
+    getEmbed(){
+        let embed = new EmbedBuilder()
     }
 }
 
