@@ -17,6 +17,7 @@ module.exports = {
     enable:true,
     aliases:[],
     permissions:null,
+    permissions_roles:["musicrole"],
     /**
      * 
      * @param {DiscordClient} client 

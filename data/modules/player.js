@@ -5,6 +5,7 @@ module.exports = {
     name:"player",
     enable:false,
     permissions:null,
+    permissions_roles:["musicrole"],
     /**
      * 
      * @param {DiscordClient} client 

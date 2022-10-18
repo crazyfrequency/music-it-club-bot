@@ -27,6 +27,7 @@ module.exports = {
     name:"equalizer",
     enable:false,
     permissions:null,
+    permissions_roles:["musicrole"],
     /**
      * 
      * @param {DiscordClient} client 

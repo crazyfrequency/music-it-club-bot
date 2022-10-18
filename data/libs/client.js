@@ -62,7 +62,7 @@ function upploadCommands(log,err,token,applicationid,dir=undefined){
         if(!command.name || !command.help || !command.command){err(`Ошибка загрузки команды на сервер: ${file}`)}
         else{
             let slashcommand = new SlashCommandBuilder().setName(command.name)
-            .setDescription(command.help.description).setDefaultMemberPermissions(command.help?.permissions||null)
+            .setDescription(command.help.description).setDefaultMemberPermissions(command.permissions||null)
             for(let i of command.help.options){
                 if(i.type=="string")slashcommand.addStringOption(option=>{option.setName(i.name)
                     .setDescription(i.description?i.description:"").setRequired(i.required?i.required:false)
@@ -116,6 +116,10 @@ class DiscordClient{
      * @param {String} token 
      */
      constructor(intents=undefined,partial=undefined,token=undefined,applicationid=undefined){
+        try{
+            var t = JSON.parse(fs.readFileSync("./data/config.json",{encoding:"utf-8"}))
+        }catch{t={}}
+        this.permissions_roles=t;
         this.log = console.log;
         this.error = console.error;
         this.log("Запуск бота...");
@@ -197,6 +201,13 @@ class DiscordClient{
         let minutes = Math.floor(time / 60),seconds = time - minutes * 60;
         return `${hours?hours+":":""}${minutes>9?minutes:"0"+minutes}:${seconds>9?seconds:"0"+seconds}`
     };
+    async GetPermissionsRole(role){
+
+    }
+    async SetPermissionsRole(role,roleid){
+        this.permissions_roles[role] = roleid;
+        fs.writeFileSync("./data/config.json",this.permissions_roles);
+    }
 }
 
 module.exports = DiscordClient;
