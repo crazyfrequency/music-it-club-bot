@@ -4,7 +4,7 @@ const DiscordPlayer = require("../libs/Player/DiscordPlayer");
 module.exports = {
     name:"player",
     enable:false,
-    permissions:["musicplayer"],
+    permissions:null,
     /**
      * 
      * @param {DiscordClient} client 

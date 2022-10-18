@@ -26,7 +26,7 @@ const equalizer_option_number={
 module.exports = {
     name:"equalizer",
     enable:false,
-    permissions:["musicplayer"],
+    permissions:null,
     /**
      * 
      * @param {DiscordClient} client 

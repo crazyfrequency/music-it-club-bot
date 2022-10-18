@@ -1,4 +1,4 @@
-const {Client,GatewayIntentBits,Partials, SlashCommandBuilder, REST, Routes} = require('discord.js');
+const {Client,GatewayIntentBits,Partials, SlashCommandBuilder, REST, Routes, PermissionFlagsBits} = require('discord.js');
 const {replacer} = require('../../config.json');
 const DiscordPlayer = require('./Player/DiscordPlayer.js');
 const DiscordConnections = require('./DiscordConnections.js');
@@ -62,7 +62,7 @@ function upploadCommands(log,err,token,applicationid,dir=undefined){
         if(!command.name || !command.help || !command.command){err(`Ошибка загрузки команды на сервер: ${file}`)}
         else{
             let slashcommand = new SlashCommandBuilder().setName(command.name)
-            .setDescription(command.help.description)
+            .setDescription(command.help.description).setDefaultMemberPermissions(command.help?.permissions||null)
             for(let i of command.help.options){
                 if(i.type=="string")slashcommand.addStringOption(option=>{option.setName(i.name)
                     .setDescription(i.description?i.description:"").setRequired(i.required?i.required:false)
