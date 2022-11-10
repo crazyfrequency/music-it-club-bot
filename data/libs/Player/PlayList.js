@@ -1,5 +1,5 @@
 const {Track} = require("./Track");
-const user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3534.0 Safari/537.36";
+const user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:106.0) Gecko/20100101 Firefox/106.0";
 const cookies = "APISID=KvpilY1TzuTWjjF8/AGebHuhBO0BlwqLMk; HSID=AXutkrbtmD-gnU3N_; LOGIN_INFO=AFmmF2swRQIhAPhNv-ZweZ79zRMWXhQAx-1H35E6B2ZNVLum7m7RklbJAiA2v1lS5RnpWslfVeDVFwa1awy-_np8iahP6ZRV8fTVvQ:QUQ3MjNmeGhBcjVwRFhrSkpFWFFHdVdJbFN0M1RXTVExN0FqNm9meVFhS3p4TUpVYW5Lc3U3QmVMX0ZXQ0JzWlg4U3lyLVF5Q2l5bFR4N0t5WFpuUk4zSWYycU1HNmpSX29jSWZDMHR4QS1zMExSbzd6a1diUGtFZDlBeWwxQk5LSGNMbWdiSDBvWk5aQUJYNUJmbF83M3hUMnJ5TU5SbmZ3; SAPISID=z_zjWozPs8OeKZOE/AmJ7jQTuZi_dM1Jwr; SID=GAgE0ryB5sb4p_e3iJi4mhleiM--qNJqXQcj6BKzzMYV3BTvltd_4u8j9i23NBl3-N0Oag.; SIDCC=AJi4QfHCOCBvCDmw9LbqowRss2FXadTYG5mNopaZU8cXORfrg9_n_7Im7dSQ_r-Y9QA078xn; SSID=ArWNCsnPFLLHspWhD; VISITOR_INFO1_LIVE=bQV13xq6F2c; YSC=3NB_UUJ-DE0";
 const {spawn} = require('child_process');
 const util = require('util');
@@ -118,13 +118,34 @@ async function getdata(request,data={},n=0){
                     result.duration=Number(res?.duration);
                 }
             }else{
-               let r1=await exec(`youtube-dl -j "${request}"`,{cwd:ffmpegdir}).catch(()=>null);
+               let r1=await exec(`youtube-dl --skip-download --cookies cookies.txt -J "${request}"`,{cwd:ffmpegdir}).catch(()=>null);
                 try{res=JSON.parse(r1.stdout)}catch{};
+                console.log(r1.stderr)
+                if(res?.entries){
+                    result.title = res.title;
+                    result.playlist = [];
+                    result.is_playlist = true;
+                    result.thumbnail = result.thumbnail;
+                    for(let i of res.entries){
+                        let audio = {};
+                        audio.video_url=request;
+                        audio.url=i.formats?(await findbestaudio(i.formats,2)):i.url;
+                        audio.thumbnail=i.thumbnail?i.thumbnail:best_thumbnail(i.videoDetails?.thumbnails);
+                        audio.views=i.view_count;
+                        audio.author=i.uploader?i.uploader:i.artist?i.artist:i.channel;
+                        audio.title=i.track?i.track:i.title;audio.type="youtube-dl";
+                        audio.duration=Number(i.duration);
+                        if(!result.thumbnail) result.thumbnail = audio.thumbnail;
+                        result.playlist.push(audio);
+                    }
+                    return result;
+                }
                 if(res){
-                    result.video_url=request;result.url=await findbestaudio(res.formats,2);
-                    result.thumbnail=best_thumbnail(res.videoDetails?.thumbnails);
-                    result.views=res.view_count;result.author=res.uploader;
-                    result.title=res.title;result.type="youtube-dl";
+                    result.video_url=request;result.url=res.formats?(await findbestaudio(res.formats,2)):res.url;
+                    result.thumbnail=i.thumbnail?i.thumbnail:best_thumbnail(res.videoDetails?.thumbnails);
+                    result.views=res.view_count;
+                    result.author=res.uploader?res.uploader:res.artist?res.artist:res.channel;
+                    result.title=res.track?res.track:res.title;result.type="youtube-dl";
                     result.duration=Number(res.duration);
                 }
             }
@@ -205,10 +226,22 @@ class PlayList extends EventEmitter{
                  * @type {Track}
                  */
                 var res = await getdata(item.request).catch(()=>{});
-                if(res){
+                if(res.is_playlist){
+                    let embed=new EmbedBuilder().setColor(14441063).setTitle('Добавлен плэйлист:')
+                    .addFields({name:'Название:',value:`[${res?.title}](${res?.url})`,inline:false})
+                    .addFields({name:'Автор:',value:`[${res?.author?.name||"Неизвестен"}](${res?.author?.url})`,inline:true},
+                    {name:'Просмотров',value:res?.views?.toString()||"Неизвестно",inline:true},
+                    {name:'Последнее изменение',value:res?.lastUpdated?.toString().substring(16)||res?.lastUpdated?.toString()||"Неизвестно",inline:true})
+                    if(res.thumbnail) embed.setImage(res.thumbnail);
+                    item.interaction.editReply({embeds:[embed]})?.catch(async(err)=>{console.log(err)});
+                    for(let i of res.playlist){
+                        let track = new Track(i,this.last_id++);
+                        this.playlist.push(track);
+                        this.emit("newTrack",item.interaction);
+                    }
+                }else{
                     res.id = this.last_id++;
-                    this.playlist.push(res)
-                    console.log(res.getEmbed())
+                    this.playlist.push(res);
                     item.interaction.editReply({embeds:[res.getEmbed()]})?.catch(async(err)=>{console.log(err)});
                     this.emit("newTrack",item.interaction);
                 }

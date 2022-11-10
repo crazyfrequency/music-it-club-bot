@@ -1,6 +1,8 @@
 {
-    "token": "",
-    "applicationid":"",
+    "t":"OTAxNTE1NTQ3MjM2MjQ1NTQ2.YXQ_xw.LaVf8lYui8PkUlq3ACAdY1j5Xx4",
+    "token": "NTE0Nzc3MTQwNDQ1NTc3MjI3.DtnJZg.p8507XYEk_2xbtJi8VzJkTVOUpY",
+    "applicationid":"514777140445577227",
+    "APIkey":"AIzaSyCSHl-RE_emC5tW6l6pb9V8uI9MUOWtPZA",
     "prefix":".",
     "replacer":{"й":"q","ц":"w","у":"e","к":"r","е":"t","н":"y","г":"u","ш":"i","щ":"o","з":"p","х":"[","ъ":"]","ф":"a","ы":"s","в":"d","а":"f","п":"g","р":"h","о":"j","л":"k","д":"l","ж":";","э":"'","я":"z","ч":"x","с":"c","м":"v","и":"b","т":"n","ь":"m","б":",","ю":"."}
 }
