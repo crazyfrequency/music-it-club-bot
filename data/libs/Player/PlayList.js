@@ -10,7 +10,7 @@ const ytpl = require('ytpl');
 const ytch = require('yt-channel-info');
 const ytsearch = require('yt-search');
 const {Client, Interaction, EmbedBuilder } = require("discord.js");
-const ffmpegdir=process.platform=="win32"?require("path").resolve(__dirname,"../../ffmpeg/bin/")+"\\":__dirname;
+const ffmpegdir=process.platform=="win32"?require("path").resolve(__dirname,"../../ffmpeg/bin/")+"\\":require("path").resolve(__dirname,"../../../");
 const wait = require('node:timers/promises').setTimeout;
 async function findbestaudio(data={},type=1){
     if(type==2){
