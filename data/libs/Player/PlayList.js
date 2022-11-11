@@ -121,7 +121,7 @@ async function getdata(request,data={},n=0){
             }else{
                let r1=await exec(`youtube-dl --skip-download --cookies cookies.txt -J "${request}"`,{cwd:ffmpegdir}).catch(()=>null);
                 try{res=JSON.parse(r1.stdout)}catch{};
-                console.log(r1)
+                console.log(1,r1)
                 if(res?.entries){
                     result.title = res.title;
                     result.playlist = [];
