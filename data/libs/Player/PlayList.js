@@ -86,6 +86,7 @@ function parseti(str='0'){
  */
 async function getdata(request,data={},n=0){
     if(!request) return;if(n>5) return;
+    console.log(request)
     var result={};
     if(ytdl.validateURL(request)){
         let res=await ytdl.getInfo(request,{lang:"ru",requestOptions:{headers:{Cookies:cookies}}});
@@ -120,7 +121,7 @@ async function getdata(request,data={},n=0){
             }else{
                let r1=await exec(`youtube-dl --skip-download --cookies cookies.txt -J "${request}"`,{cwd:ffmpegdir}).catch(()=>null);
                 try{res=JSON.parse(r1.stdout)}catch{};
-                console.log(r1.stderr)
+                console.log(r1)
                 if(res?.entries){
                     result.title = res.title;
                     result.playlist = [];
@@ -149,7 +150,7 @@ async function getdata(request,data={},n=0){
                     result.duration=Number(res.duration);
                 }
             }
-        }catch{}
+        }catch(e){console.log(e)}
     }else{
         let res=(await ytsearch(request).catch(()=>null))?.videos[0];
         return await getdata(res?.url);
