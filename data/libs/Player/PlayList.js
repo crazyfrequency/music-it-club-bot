@@ -85,7 +85,7 @@ function parseti(str='0'){
  * @returns {Track} 
  */
 async function getdata(request,data={},n=0){
-    if(!request) return;if(n>5) return;
+    if(!request) return;if(n>5) return null;
     console.log(request)
     var result={};
     if(ytdl.validateURL(request)){
@@ -129,7 +129,7 @@ async function getdata(request,data={},n=0){
                     result.thumbnail = result.thumbnail;
                     for(let i of res.entries){
                         let audio = {};
-                        audio.video_url=request;
+                        audio.video_url=audio.webpage_url;
                         audio.url=i.formats?(await findbestaudio(i.formats,2)):i.url;
                         audio.thumbnail=i.thumbnail?i.thumbnail:best_thumbnail(i.videoDetails?.thumbnails);
                         audio.views=i.view_count;
@@ -155,6 +155,7 @@ async function getdata(request,data={},n=0){
         let res=(await ytsearch(request).catch(()=>null))?.videos[0];
         return await getdata(res?.url);
     }
+    if(!result.url) return getdata(request,result,n++);
     return new Track(result);
 }
 
@@ -227,7 +228,7 @@ class PlayList extends EventEmitter{
                  * @type {Track}
                  */
                 var res = await getdata(item.request).catch(()=>{});
-                if(res.is_playlist){
+                if(res?.is_playlist){
                     let embed=new EmbedBuilder().setColor(14441063).setTitle('Добавлен плэйлист:')
                     .addFields({name:'Название:',value:`[${res?.title}](${res?.url})`,inline:false})
                     .addFields({name:'Автор:',value:`[${res?.author?.name||"Неизвестен"}](${res?.author?.url})`,inline:true},
@@ -240,7 +241,7 @@ class PlayList extends EventEmitter{
                         this.playlist.push(track);
                         this.emit("newTrack",item.interaction);
                     }
-                }else{
+                }else if(res){
                     res.id = this.last_id++;
                     this.playlist.push(res);
                     item.interaction.editReply({embeds:[res.getEmbed()]})?.catch(async(err)=>{console.log(err)});
