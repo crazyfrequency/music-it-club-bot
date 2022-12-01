@@ -7,7 +7,7 @@ module.exports = {
         description:"Проверка пинга",
         options:[],
     },
-    enable:true,
+    enable:false,
     aliases:[],
     permissions:null,
     permissions_roles:[],
