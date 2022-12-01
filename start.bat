@@ -1,0 +1,1 @@
+cmd /c "npm update && node bot"
