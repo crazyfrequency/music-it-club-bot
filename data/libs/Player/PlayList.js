@@ -10,7 +10,7 @@ const ytpl = require('ytpl');
 const ytch = require('yt-channel-info');
 const ytsearch = require('yt-search');
 const {Client, Interaction, EmbedBuilder } = require("discord.js");
-const ffmpegdir=process.platform=="win32"?require("path").resolve(__dirname,"../../ffmpeg/bin/")+"\\":require("path").resolve(__dirname,"../../../ffmpeg/bin/");
+const ffmpegdir=process.platform=="win32"?require("path").resolve(__dirname,"../../ffmpeg/bin/")+"\\":__dirname;
 const wait = require('node:timers/promises').setTimeout;
 async function findbestaudio(data={},type=1){
     if(type==2){
@@ -85,8 +85,7 @@ function parseti(str='0'){
  * @returns {Track} 
  */
 async function getdata(request,data={},n=0){
-    if(!request) return;if(n>5) return null;
-    console.log(request)
+    if(!request) return;if(n>5) return;
     var result={};
     if(ytdl.validateURL(request)){
         let res=await ytdl.getInfo(request,{lang:"ru",requestOptions:{headers:{Cookies:cookies}}});
@@ -121,7 +120,7 @@ async function getdata(request,data={},n=0){
             }else{
                let r1=await exec(`youtube-dl --skip-download --cookies cookies.txt -J "${request}"`,{cwd:ffmpegdir}).catch(()=>null);
                 try{res=JSON.parse(r1.stdout)}catch{};
-                console.log(ffmpegdir,"\n",r1)
+                console.log(r1.stderr)
                 if(res?.entries){
                     result.title = res.title;
                     result.playlist = [];
@@ -129,7 +128,7 @@ async function getdata(request,data={},n=0){
                     result.thumbnail = result.thumbnail;
                     for(let i of res.entries){
                         let audio = {};
-                        audio.video_url=audio.webpage_url;
+                        audio.video_url=audio.webpage_url||request;
                         audio.url=i.formats?(await findbestaudio(i.formats,2)):i.url;
                         audio.thumbnail=i.thumbnail?i.thumbnail:best_thumbnail(i.videoDetails?.thumbnails);
                         audio.views=i.view_count;
@@ -155,7 +154,6 @@ async function getdata(request,data={},n=0){
         let res=(await ytsearch(request).catch(()=>null))?.videos[0];
         return await getdata(res?.url);
     }
-    if(!result.url) return getdata(request,result,n++);
     return new Track(result);
 }
 
@@ -241,7 +239,7 @@ class PlayList extends EventEmitter{
                         this.playlist.push(track);
                         this.emit("newTrack",item.interaction);
                     }
-                }else if(res){
+                }else{
                     res.id = this.last_id++;
                     this.playlist.push(res);
                     item.interaction.editReply({embeds:[res.getEmbed()]})?.catch(async(err)=>{console.log(err)});

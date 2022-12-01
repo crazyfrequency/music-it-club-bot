@@ -198,11 +198,12 @@ class Track{
         this.errors=0;
     }
     async getUrl(newdata=false){
-        if(new Date()-this.shelf_life>21600000 && this.type=="youtube"){
-            let res = await ytdl.getBasicInfo(request,{lang:"ru",requestOptions:{headers:{Cookies:cookies}}});
-            this.url = await findbestaudio(res.formats).catch(()=>{});
+        if(new Date()-this.shelf_life>21600000){
+            let res = await ytdl.getBasicInfo(request,{lang:"ru",requestOptions:{headers:{Cookies:cookies}}}).catch(()=>null);
+            if(res)
+            this.url = await findbestaudio(res.formats).catch(()=>{})||this.url;
         }
-            return this.url
+        return this.url;
     }
     getEmbed(){
         let embed = new EmbedBuilder().setColor(14441063).setTitle('Добавлен трек:')
